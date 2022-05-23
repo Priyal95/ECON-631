@@ -1,0 +1,214 @@
+---
+title: "Final Project"
+output: html_document
+date: '2022-05-10'
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(rpart)
+library(lubridate)
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Write R code chunks to import all the data files as necessary.
+
+## A code chunck to import necessary file
+```{r}
+data<-read.csv("/Users/poojanshah/Downloads/netflix_titles 2.csv")
+head(data)
+
+```
+
+## Data cleaning
+```{r}
+data$date_added <- as.POSIXct(data$date_added, format = "%b%d,%Y")
+data$date_added <- format(data$date_added, format = "%Y")
+data$date_added<-as.numeric(data$date_added)
+data$director[data$director==""] <- NA
+data$cast[data$cast==""] <- NA
+data$country[data$country==""] <- NA
+data$rating[data$rating==""] <- NA
+head(data)
+```
+
+
+## Question 1: Zimmi wanted to see the trend of Movies and Tv- shows added on Netflix over the years.
+
+## Code chunck for the visualisation:
+Creating a dataframe that filters the data with year greater than or equal to 2010. 
+Grouping the data by release year and type 
+Taking a count of it 
+Output:This will give us a data frame that has counts of tv shows and movies released every year after 2010
+```{r}
+trend<-data %>% filter(release_year >= 2010) %>% group_by(release_year,type) %>% count() 
+trend
+```
+## Vizualisation
+Setting up a plot using ggplot(), using geom_lines to show the trends, geom_points to highlight the important points on the trend line and geom_text_repel() for annotations.
+
+## To reduce the ink to data ratio
+To do so, I subsetted the geom_point and the geom_text repel to only those dates that were important from the stoytelling perspective and also I removed the gride lines, panal border and axis lines. 
+
+##Code chunck for the visualistaion
+
+```{r}
+#setting up the plot
+plot4<-ggplot(data=trend, aes(x=release_year,y=n,fill=type, group=type)) + geom_line( aes(color=type)) + 
+# Adding points or markers to the important dates i.e for movies 2013 & 2017 and for tv show 2013 & 2020
+geom_point(data = subset(trend,release_year == 2013 & type=='Movie'|release_year == 2017 & type=='Movie'|release_year == 2013 & type=='TV Show'|release_year == 2020 & type=='TV Show')) + 
+#Adding text to the important dates i.e for movies 2013 & 2017 and for tv show 2013 & 2020
+F +
+# Renaming the x and y axis and adding a tittle
+labs(x='Year',y='Count',title= expression(paste('A trend of movies and tv shows ', italic(bold('released' )), ' on Netflix over the years'))) + 
+#Reducing the ink to data ratio
+theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+plot4
+
+ggsave('fig1.png',plot=plot4, width = 20, height = 10, units = "cm")
+```
+## So is movie preferd over tv shows?
+## Code chunk for visualisation
+```{r}
+#gruping the data by date added and type 
+Prefrence<- data%>%group_by(date_added,type)%>%summarise(n=n())
+Prefrence
+```
+```{r}
+Plot5<-Prefrence%>%
+  group_by(date_added, type)%>%
+  summarise(n=n())%>% 
+  ggplot(aes(date_added, color=type, na.rm= TRUE))+
+  geom_density(aes(fill=type,alpha=0.2))+ labs(x='Year',y='Count',title=('A trend of movies and TV shows'~bold ('relesed on Netflix over the year')))
+  theme_bw()+ theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+Plot5
+```
+## So is movie prefered over tv shows?
+Calculating a percentage change from 2008 to 2015 to answer this question
+## Code chunck for vizualisation
+```{r}
+#Calculating a percentage change from 2008 to 2021 by grouping the data by date added and type
+Perc_change <- data%>%
+group_by(type,date_added)%>%summarise(n=n())%>%
+#Filtering the years to 2008, 2015 and 2021
+filter(date_added==2008|date_added==2015|date_added==2021) %>% 
+#calculating a percentage change
+mutate(pct_change =(round(n/lag(n)-1) * 100))
+# Replacing the NA with zero
+Perc_change[is.na(Perc_change)]<- 0 
+```
+#Setting up the vizualistion
+```{r}
+#Setting up a plot using ggplot
+plot11<- ggplot(data=Perc_change, aes(x=date_added,y=pct_change)) +
+# Using geom_smooth for the curves
+geom_smooth(aes(colour= type))+ 
+# Using geom_point to add points to the curve
+geom_point()+
+#adding text to the relevant trend points and adding a % to the data points 
+geom_text_repel(data = subset(c,date_added == 2015 & type=='Movie'|date_added == 2021 & type=='Movie'|date_added == 2015 & type=='TV Show'|date_added == 2021 & type=='TV Show'), mapping = aes(label =paste0(pct_change,"%")))+
+#Renaming the axis by altering the labs() and bolding the important words in title
+labs( x='Year', y='Percentage',title=expression(paste('A percentage change in movies and tv shows ', italic(bold('added' )), ' on Netflix from 2008 to 2021')))+ 
+#Reducing the ink to data ratio by cleaning the graph
+theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+plot11
+
+ggsave('fig2.png',plot=plot11, width = 20, height = 10, units = "cm")
+```
+```{r}
+data2<-read.csv("/Users/poojanshah/Downloads/netflix_titles 2.csv")
+data2$date_added<-as.POSIXct(data2$date_added, format = "%b%d,%Y")
+data2$date_added <- format(data2$date_added, format = "%b")
+head(data2)
+```
+```{r}
+BestMonth<- data2%>%group_by(date_added,type) %>% summarise(n=n()) 
+BestMonth
+```
+##Question 2: What countries have the highest amnount of TV-MA content
+
+```{r}
+TVMA <- data
+#separating each country from a string of countries, grouping by rating and country, filtering the TV-MA, arranging in descending order and omitting all the na values 
+TVMA %>% separate_rows(country, sep=',') %>%  group_by(rating,country) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(TVMA) 
+#assigning a value to seprated countries
+sep<- TVMA %>% separate_rows(country, sep=',')
+# trimming the whit space so that there is no double entry with respect to countries
+sep$sepc<-trimws(sep$country, which = c("left"))
+# selecting top ten countries with the highest TVMA content and calculating a percentage
+p<-sep%>%group_by(rating,sepc) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% slice(1:10) %>% mutate(percentage=n/sum(n)*100) p$sepc[p$sepc==""]<- NA
+p<-na.omit(p)
+#rounding off the percentage
+p$percentage<-round(p$percentage)
+p
+```
+## For data Vizualisation
+
+```{r}
+plt <- ggplot(p) +
+  # Make custom panel grid
+  geom_hline(
+    aes(yintercept = y), 
+    data.frame(y = c(0:3) * 000.1),
+    color = "lightgrey"
+  ) +   geom_col(
+    aes(
+      x = sepc,
+      y = percentage,
+      fill = percentage
+    ),
+    position = "dodge2",
+    show.legend = TRUE,
+    alpha = .5
+  )+geom_point(
+    aes(
+      x = sepc,
+      y = percentage
+    ),
+    size = 1,
+    color = "gray12"
+  ) +  labs( x='Country', y='Percentage',title=expression(paste('Top ten countries with ', italic(bold('highest' )), ' TV MA count')))+
+  coord_polar()+theme_bw() + theme(panel.border = element_blank())
+
+plt
+
+ggsave('fig2.png',plot=plt, width = 20, height = 15, units = "cm")
+```
+```{r}
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+ggplot(BestMonth, aes(fill=type, y=n, x=date_added)) + 
+    geom_bar(position="stack", stat="identity") +
+    scale_fill_viridis(discrete = T) +
+    ggtitle("Studying 4 species..") +
+    theme_ipsum() +
+    xlab("")
+```

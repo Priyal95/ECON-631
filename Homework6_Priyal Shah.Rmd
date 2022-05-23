@@ -1,0 +1,121 @@
+---
+title: 'Group/Homework #6'
+author: '[Type in Your Name]'
+date: "4/28/2022"
+output: html_document
+---
+
+## Preface/Preamble
+
+You should always have an initial r code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+```{r}
+library(tidyverse)
+library(gapminder)
+library(socviz)
+library(ggplot2)
+library(dplyr)
+library(ggrepel)
+library(coefplot)
+```
+
+## Chapters 6 and 7 "Where to Go Next" Plus Some Others
+
+**Put `r` code into code chunks and write narrative answers as plain text.**
+
+1. Chapter 6, page 169. "Default plots for models" Run the following model:
+
+```{r}
+lm(formula = lifeExp ~ log(gdpPercap) + pop + continent, data = gapminder)
+out <- lm(formula = lifeExp ~ log(gdpPercap) + pop + continent, data = gapminder)
+plot(out, ask = FALSE)
+```
+
+Using the plot() function built into base R to create *all* the plots of the regression results the function generates.
+
+Discuss the ways in which this approach of using the `plot()` function is a) better and b) worse than using the functions in the `broom` library to extract and plot results.
+
+2. Install and load the `coefplot` package, and generate a plot of the regression results from Question 1 above. Be sure to make the plot with the following characteristics: a) red lines/dots b) variables ordered by magnitude, with the large effect on the bottom c) intercept renamed to "Constant".
+```{r}
+
+a<- coefplot(out, sort = "magnitude", color="darkred")   
+a + scale_y_discrete(name ="Coefficent", labels=c("pop","constant","continentAsia","log(gdpPercap)","continentAmerica","continentOcenia","continetEurope"))
+
+a
+```
+
+3. Chapter 7, page 194. Sidebar. Try revisiting your code for the ur-choropleths, but use continuous rather than binned measures, as well as the `viridis` palette. Instead of `pct_black` use the `black` variable. For the population density, divide `pop` by `land_area`. You will need to adjust the `scale_` functions. How do the maps compare to the binned versions? What happens to the population density map, and why?
+```{r}
+library(viridis)
+county_full <- left_join(county_map, county_data, by = "id")
+p <- ggplot(data = county_full,
+mapping = aes(x = long, y = lat, fill = black,
+group = group))
+p1 <- p + geom_polygon(color = "gray90", size = 0.05) + coord_equal()
+p2 <-  p1 + scale_color_viridis(palette="Greens")+labs(fill = "population density")
+p2
+```
+4. The `maps` library has other map data built in, in addition to the U.S. states. Using similar steps as in the textbook, accomplish the following. Create a world map dataframe (hint: "world" instead of "state"), join it with the `gapminder` data, and plot a world map that fills in countries according to their life expectancy in in 2007.
+
+```{r}
+library(maps)
+world <- map_data("world")
+
+names(gapminder)[names(gapminder) == 'country'] <- 'region'
+
+head(gapminder)
+```
+
+```{r}
+world_gap <-left_join(world, gapminder)
+head(world_gap)
+```
+```{r}
+p0 <- ggplot(data = subset(world_gap, year = 2007),
+             mapping = aes(x = long, y = lat,
+                 group = group,
+                 fill = lifeExp))
+
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.05) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45) 
+
+p2 <- p1 + scale_fill_viridis_c(option = "plasma")
+
+p2
+
+
+```
+
+
+5. Chapter 7 "Where to go next". As Healy discusses, `sf` implements a standard way to encode and work with real world things ("simple features"). Install and load the package, and skim through the `ggplot2` [reference page on `sf`](https://ggplot2.tidyverse.org/reference/ggsf.html). Create the dataframe `nc` as indicated in the example code.  How are the latitudes and longitudes stored in this data? How is the format different from what you worked with in Chapter 7?
+
+install.packages("sf")
+library(sf)
+```{r}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+ggplot(nc) + geom_sf(aes(fill = AREA))
+```
+
+6. Using the `nc` dataframe, plot a map of North Carolina that shades in the counties by the length of the perimeter. For the fill scale, the mid-point should be at 2 and have a diverging color scheme for counties with perimeter less than 2 versus counties with perimeter greater than 2.
+
+```{r}
+
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+ggplot(nc) + geom_sf(aes(fill = PERIMETER>=2))+labs(fill = "Perimeter Greater Than TWO" )
+```
+
+7. Using one of the built-in data sets (either into `R`, `tidyverse` or `socviz`), create a simple `gganimate` plot. Then, change one of the `gganimate` functions you use to alter the way that the plot is animated. (This question therefore asks for *two* animated plots.) For help, this is [the getting started](https://gganimate.com/articles/gganimate.html) guide, and this is [the reference page](https://gganimate.com/reference/index.html).
+```{r}
+library(gganimate)
+library(gapminder)
+library(ggplot2)
+```
+
+```{r}
+library(gganimate)
+anim <- p + 
+  transition_states(continent,
+                    transition_length = 2,
+                    state_length = 1)
+anim
+```

@@ -1,0 +1,176 @@
+---
+title: 'Group/Homework #5'
+author: '[Priyal]'
+date: "4/30/2022"
+output: html_document
+---
+
+## Setting Up a Project
+
+Having files and documents organized well (and maintaining that organization) is an important aspect of data analysis projects. Refer back to Chapter 1 and the Appendix of *Data Visualization*. Obtain all the data files that your client shares with you. Create a project folder and subfolders within it. Include the `here()` library in the preamble and use it to help import/export. **This is not the file that you will submit as your project. This is behind-the-scenes analysis file, which you can later build on/refine to generate your final products.*    
+
+## Preface/Preamble
+
+For the purposes of this homework, consider this to be the beginning of your Rmarkdown file. You should always have an initial R code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(rpart)
+library(lubridate)
+library(tidyverse)
+```
+
+## Project Summary
+
+Describe/summarize your project here:
+
+1. Who is your client? What is her/his organization and role?
+Zimmi is my client and he is one of the board of directors at Netflix
+ 
+2. What is/are the question(s) s/he would like you to explore and answer?
+He would like to know the distribution of content in terms of movies and TV shows on Netflix. The trends in the number of content released over the years. The distribution of the duration. Number of tv shows and movies released in each country. The distribution of the rating across country.
+
+3. What is the source of the data, the quality of the data, and the appropriateness of the data available to you for analysis?
+
+The data is taken from kaggle, the data had missing values that had to be replaced by NA. A little bit of data cleaning needed to be done but apart from that the data set looks good for analysis  
+
+4. What is your plan of action? (What are the key data manipulation steps? What are some key anticipated challenges? How will you address these challenges?)
+
+My plan of action is to clean the data set first and then work on the questions that my director has one by one. Then try to tweak, manipulate and clean the data as per the need of the questions. The challenges I might face could be with parting the date, time and duration and then grouping by 
+
+5. What is your time line? (What aspect of the project will you complete by when? When might you need to check in with your client prior to presenting?)
+I should be able to complete it by 3rd May and that's when me and my client can check in before presenting.
+
+## Import the Data Files
+
+Write R code chunks to import all the data files as necessary.
+
+```{r}
+data<-read.csv("/Users/poojanshah/Downloads/netflix_titles.csv")
+head(data)
+```
+
+## Data Cleaning/Arranging
+As needed, clean up any messy variable names, pare down to only the columns/observations you need. Some of you might need to `join` across multiple data files. Do that here as well.
+
+```{r}
+
+data$date_added <- format(data$date_added, "%Y")
+data$date_added <- as.integer(data$date_added)
+data$director[data$director==""] <- NA
+data$cast[data$cast==""] <- NA
+data$country[data$country==""] <- NA
+data$rating[data$rating==""] <- NA
+head(data)
+```
+## Descriptive Statistics and Visualizations
+
+Write R code chunks to produce some descriptive statistics and visualizations. This is exploratory data analysis. Generate whatever visualizations that would help you understand the patterns of the data, at the level of each individual variables and across.
+
+```{r}
+data %>% count(type) %>% ggplot(aes(x = type, y = n, color = type, lable=n))+ geom_point()+geom_text(aes(label=ifelse(n,as.character(n),'')),hjust=-1,vjust=0)
+```
+```{r}
+
+
+
+```
+
+
+
+```{r}
+a<- data %>%group_by(rating) %>% summarize(total = n()) %>% mutate(percentage= round((total/sum(total))*100,digits=3)) 
+head(a)
+ggplot(a, aes(x=rating,y= percentage))+
+geom_bar(stat='identity')+coord_flip()
+```
+
+```{r}
+data %>% 
+  separate_rows(country,sep=", ") %>% 
+  group_by(type) %>% 
+  mutate(country=fct_infreq(country)) %>% 
+  ggplot(aes(y=country,fill=type))+
+  geom_bar()+
+  coord_cartesian(ylim=c(1,10)) +
+  facet_wrap(~type)
+```
+```{r}
+data %>% separate_rows(country,sep=", ") %>% group_by(country, type) %>% 
+summarise(count = n()) %>%  filter(country=='India'| country=='United States') %>%
+ggplot(aes(x = country, y = count, colour = type, group=type))+ geom_line(size=1.1)+facet_wrap(~type) 
+```
+```{r}
+data %>% 
+  filter(release_year >= 2014) %>% 
+  group_by(release_year,type) %>% 
+  count() %>% 
+  ggplot(aes(x=release_year,y=n,fill=type)) + 
+  geom_line(aes(color=type))+geom_point()+geom_text(aes(y=n,label=n),
+            position=position_stack(vjust=0.5))
+
+```
+
+```{r}
+library(ggrepel)
+library(dplyr)
+library(ggplot2) 
+b<-data %>% filter(release_year >= 2010) %>% group_by(release_year,type) %>% count() 
+
+ggplot(data=b, aes(x=release_year,y=n,fill=type)) + geom_line( aes(color=type)) + geom_point()+geom_text_repel(data = subset(b,release_year == 2014 & type=='Movie'|release_year == 2017 & type=='Movie'|release_year == 2015 & type=='TV Show'|release_year == 2018 & type=='TV Show'), mapping = aes(label = n))+labs(
+    x='Year',
+    y='Count',
+    title='A trend of movies and TV shows over the year'
+  )
+
+b
+```
+p + geom_point() +
+geom_text_repel(data = subset(by_country,
+gdp_mean > 25000 | health_mean < 1500 |
+country %in% "Belgium"), mapping = aes(label = country))
+```{r}
+c<-data%>% 
+  group_by(date_added, type)%>%
+  summarise(n=n())
+ggplot(data=c, mapping= aes(date_added, fill=type, alpha = 0.4, bins = 20,stat_count(width = 0.5)))+
+ geom_bar()+
+  theme_bw()
+
+c<- data%>%
+ group_by(type,date_added)%>%
+  summarise(n=n())%>% mutate(pct_change = (n/lag(n) - 1) * 100)
+  ggplot(aes(pct_change, fill=type))+
+  geom_area(aes(fill=type), alpha=0.4,bins=10)+
+  theme_bw()
+
+ggplot(c, aes(date_added, fill=type)) + 
+    geom_area(alpha = 0.4, bins = 4)
+
+c
+```
+```{r}
+data%>%
+ group_by(date_added, type)%>%
+  summarise(n=n())%>%
+  ggplot(aes(date_added, fill=type))+
+  geom_area()+
+  theme_bw()
+<- data%>%
+ group_by(type,release_year)%>%
+  summarise(n=n())%>% mutate(pct_change = (n/lag(n) - 1) * 100)
+ggplot(data=c, aes(x=date_added,y=n,fill=type)) + geom_line( aes(color=type))+ geom_point()
+p <- ggplot(data = c,
+mapping = aes(x = date_added, y = pct_change
+, fill = type))
+p + geom_col() + guides(fill = FALSE)
+```
+```{r}
+l <- data
+l %>% separate_rows(country, sep=',') %>% group_by(rating,country) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) %>% 
+```
+```{r}
+install.packages("leaflet")
+library(leaflet)

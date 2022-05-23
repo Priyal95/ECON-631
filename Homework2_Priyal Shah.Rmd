@@ -1,0 +1,123 @@
+---
+title: 'Group/Homework #2'
+author: '[Priyal Shah]'
+date: "3/31/2022"
+output: html_document
+---
+
+## Preface/Preamble
+
+You should always have an initial r code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+
+## Chapter 3 "Where to Go Next"
+
+**Put `r` code into code chunks and write narrative answers as plain text.**
+
+1. What happens when you put the `geom_smooth()` function before `geom_point()` instead of after it? What does this tell you about how the plot is drawn? Think about how this might be useful when drawing plots.
+
+```{r}
+library(tidyverse)
+library(gapminder)
+```
+
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) 
+p   + geom_point() +geom_smooth()
+```
+
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) 
+p  + geom_smooth() + geom_point()
+```
+Having geom_smooth before geom_point makes the dots sit on the line instead of line on the dots (in case of geom_points before  geom_smooth). It shows how the layering using ggplot works. It layers according to what command is passed first. Here since geom_smooth is passed first followed by geom_points the line of best fit gets covered with the clutter of data points. The first graph  helps in conveying the story behind the infographic better showing a diminishing relation between the two variables with  
+points cluttered on the line of good fit.
+
+2. Change the mappings in the `aes()` function so that you plot Life Expectancy against population (pop) rather than per capita GDP. What does that look like? What does it tell you about the unit of observation in the dataset?
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+p + geom_point() + geom_smooth(method = "lm")
+```
+```{r}
+p <- ggplot(data = gapminder, mapping = aes(x = pop, y = lifeExp))
+p + geom_point() + geom_smooth(method = "lm")
+```
+The graph gdp and Life expectancy are more clustered towards the line of good fit and the population and Life Exp has more variation and therefore the spread across 0e+00 there are no data points that exceed the 0e+00 pop probably because there is no data on population available beyon that.
+
+3. Try some alternative scale mappings. Besides `scale_x_log10()` you can try `scale_x_sqrt()` and `scale_x_reverse()`. There are corresponding functions for y-axis transformations. Just write `y` instead of `x`. Experiment with them to see what sort of effect they have on the plot, and whether they make any sense to use.
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_x_sqrt(labels = scales::dollar)
+```
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_sqrt(labels = scales::dollar)
+```
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_x_reverse(labels = scales::dollar)
+```
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+These graphs are slightly vague to interperte but the reverse() make the mirror image of the graph
+
+4. What happens if you map `color` to `year` instead of `continent`? Is the result what you expected? Think about what class of object `year` is. Remember you can get a quick look at the top of the data, which includes some shorthand information on the class of each variable, by typing `gapminder`.
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp, color = year))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp, color = continent))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+When we map colour to year instead of continent it gives us a representation of gdp and life expectancy interms of year with a single curve passing through the points. The second diagram shows life expectancy and gdpPercap in terms of differnt countries and there is a line of best fit for every country.
+
+5. Instead of mapping `color = year`, what happens if you try `color = factor(year)`?
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp, color = year))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+
+```{r}
+p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp, color = factor(year)))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+The colour=year takes into consideration only the decades while the colour = factor(year) spits out every possible year and has a seprate color and a line of fit for each year.
+
+6. As you look at these different scatterplots, think about Figure 3.13 a little more critically. We worked it up to the point where it was reasonably polished, but is it really the best way to display this country-year data? What are we gaining and losing by ignoring the temporal and country-level structure of the data? How could we do better? Sketch out (in words) what an alternative visualization might look like.
+
+The best way to show fig 3.13 is to group the data into bins segregated by continents. The graph definetly helps us in understanding the life expectency of the entire world but it is very difficult to understand which countries overperform or outperform and also how are different countries doing interms of Life expectancy.
+
+7. Save the plot from #5 above using both the `here()` function and the `ggsave()` function.
+```{r}
+plot1 <- p<- ggplot(data = gapminder, mapping = aes( x = gdpPercap, y = lifeExp, color = factor(year)))
+p + geom_point() + 
+  geom_smooth(method = "gam")+
+  scale_y_reverse(labels = scales::dollar)
+```
+```{r}
+ggsave('fig1.png',plot=plot1)
+```
+```{r}
+
+ggsave(here("figures", "fig1.png"), plot = plot1)
+```

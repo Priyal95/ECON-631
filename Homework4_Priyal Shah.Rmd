@@ -1,0 +1,255 @@
+---
+title: 'Group/Homework #4'
+author: '[Priyal Shah]'
+date: "4/20/2022"
+output: html_document
+---
+
+## Preface/Preamble
+
+You should always have an initial r code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+```{r}
+library(tidyverse)
+library(gapminder)
+library(socviz)
+library(ggplot2)
+library(dplyr)
+library(ggrepel)
+```
+
+## Chapter 5 "Where to Go Next"
+
+**Put `r` code into code chunks and write narrative answers as plain text.**
+
+1. The `subset()` function is very useful when used in conjunction with a series of layered geoms. Go back to your code for the Presidential Elections plot (Figure 5.18) and redo it so that it shows all the data points but only labels elections since 1992. You might need to look again at the elections_historic data to see what variables are available to you. You can also experiment with subsetting by political party, or changing the colors of the points to reflect the winning party.
+
+```{r}
+elections_historic %>% select(2:7)
+
+p_title <- "Presidential Elections: Popular & Electoral College Margins" 
+p_subtitle <- "1824-2016"
+p_caption <- "Data for 2016 are provisional."
+
+x_label <- "Winner's share of Popular Vote"
+y_label <- "Winner's share of Electoral College Votes"
+p <- ggplot(elections_historic, aes(x = popular_pct, y = ec_pct, label = winner_label))
+p + geom_hline(yintercept = 0.5, size = 1.4, color = "gray80") + geom_vline(xintercept = 0.5, size = 1.4, color = "gray80") + geom_point() +
+geom_text_repel() +
+scale_x_continuous(labels = scales::percent) + scale_y_continuous(labels = scales::percent) +
+labs(x = x_label, y = y_label, title = p_title, subtitle = p_subtitle,
+caption = p_caption)
+```
+
+
+```{r}
+elections_historic %>% select(2:7)
+
+p_title <- "Presidential Elections: Popular & Electoral College Margins" 
+p_subtitle <- "1824-2016"
+p_caption <- "Data for 2016 are provisional."
+
+x_label <- "Winner's share of Popular Vote"
+y_label <- "Winner's share of Electoral College Votes"
+p <- ggplot(data = elections_historic,
+mapping = aes(x = popular_pct, y = ec_pct, label = winner_label))
+p + geom_point() +
+geom_text_repel(data = subset(elections_historic, year >1992),
+mapping = aes(label = winner_label)) 
+p <- ggplot(data = elections_historic,
+mapping = aes(x = popular_pct, y = ec_pct))
+
+```
+2. Use `geom_point()` and `reorder()` to make a Cleveland dot plot of all Presidential elections, ordered by share of the popular vote.
+```{r}
+p <- ggplot(data = elections_historic,
+mapping = aes(y = ec_pct, x = reorder(popular_pct, ec_pct),
+label = winner_label))
+p + geom_point(size=3) + scale_y_continuous(labels = scales::percent)+
+labs(x = x_label, y = y_label, title = p_title, subtitle = p_subtitle,caption = p_caption)
+```
+
+3. Try using `annotate()` to add a rectangle that lightly colors the entire upper left quadrant of Figure 5.18.
+```{r}
+elections_historic %>% select(2:7)
+
+p_title <- "Presidential Elections: Popular & Electoral College Margins" 
+p_subtitle <- "1824-2016"
+p_caption <- "Data for 2016 are provisional."
+
+x_label <- "Winner's share of Popular Vote"
+y_label <- "Winner's share of Electoral College Votes"
+p <- ggplot(elections_historic, aes(x = popular_pct, y = ec_pct, label = winner_label))
+p + geom_hline(yintercept = 0.5, size = 1.4, color = "gray80") + geom_vline(xintercept = 0.5, size = 1.4, color = "gray80") + geom_point() +
+geom_text_repel() +
+scale_x_continuous(labels = scales::percent) + scale_y_continuous(labels = scales::percent) +
+annotate(geom = 'rect', xmin = .30, xmax = .35, ymin = .90, ymax = 1, fill = 'red', alpha = 0.2)
+```
+
+4. The main action verbs in the `dplyr` library are `group_by()`, `filter()`, `select()`, `summarize()`, and `mutate()`. Practice with them by revisiting the gapminder data to see if you can reproduce a pair of graphs from Chapter One, shown again in Figure 5.28 (p. 132). You will need to filter some rows, group the data by continent, and calculate the mean life expectancy by continent before beginning the plotting process.
+
+```{r look}
+gapminder
+```
+
+
+```{r}
+ lifeExp_bycountry <- gapminder %>%
+   group_by(continent)
+lifeExp_bycountry %>%
+   filter(year==2007) 
+a<- lifeExp_bycountry %>%
+   summarize(mean_lifeExp = mean(lifeExp))
+
+p <- ggplot(data = a,
+mapping = aes(x = a$mean_lifeExp, y = reorder(a$continent, a$mean_lifeExp)))
+p + geom_point(size=3) 
+```
+```{r}
+p<- ggplot(data = a, mapping= aes(x = a$mean_lifeExp, y= a$continent))
+  
+p+ geom_col()
+```
+5. Try creating some grouped objects from the GSS data, calculating frequencies as you learned in this Chapter, and then check to see if the totals are what you expect.
+
+    a. Start by grouping `degree` by `race` like in the code and table on pp. 132-133. Check the results are as you expect by grouping by race and summing the percentages.
+
+```{r}
+gss_sm %>% 
+  group_by(race, degree) %>% 
+  summarize(N= n()) %>% 
+  mutate(pct = round(N/sum(N)*100, 0)) %>% 
+  summarize(sum_pct =sum(pct))  
+```
+    b. Try doing the same exercise grouping by `sex` or `region`.
+```{r}
+gss_sm %>% 
+  group_by(sex, region) %>% 
+  summarize(N= n()) %>% 
+  mutate(pct = round(N/sum(N)*100, 0)) %>% 
+  summarize(sum_pct =sum(pct))  
+```
+6. Try summary calculations with functions other than sum. Can you calculate the mean and median number of children by degree? (Hint: the childs variable in gss_sm has children as a numeric value.)
+```{r}
+head(gss_sm)
+```
+
+```{r}
+gss_sm %>% 
+  group_by(degree) %>% 
+  summarize(mean_with_deg = mean(childs, na.rm = TRUE)) 
+```
+```{r}
+gss_sm %>% 
+  group_by(degree) %>% 
+  summarize(med_with_degree = median(childs, na.rm = TRUE)) 
+```  
+7. Experiment with the `gapminder` data to practice some of the new geoms we have learned. Try examining population or life expectancy over time using a series of boxplots. (Hint: you may need to use the `group` aesthetic in the `aes()` call.) Can you facet this boxplot by continent? Is anything different if you create a tibble from `gapminder` that explicitly groups the data by `year` and `continent` first, and then create your plots with that?
+head(gapminder)
+str(gapminder)
+```{r}
+p<- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = year, group = year))
+
+p + geom_boxplot()+
+  facet_grid(~continent)
+```
+```{r}
+tibble <-gapminder %>% group_by(year, continent) 
+p<- ggplot(data = tibble, mapping = aes(x = lifeExp, y = year, group = year))
+
+p + geom_boxplot()+
+  facet_grid(~continent)
+```  
+They look simliar to me. I feel there is no difference.
+
+8. Read the help page for `geom_boxplot()` and take a look at the notch and varwidth options. Try them out to see how they change the look of the plot.
+```{r}
+p<- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = year))
+
+p + geom_boxplot(notch= TRUE)+ 
+  facet_grid(~continent)
+```
+
+```{r}
+p<- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = year))
+
+p + geom_boxplot(notch= FALSE)+ 
+  facet_grid(~continent)
+```
+
+```{r}
+p<- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = year))
+
+p + geom_boxplot(varwidth= TRUE)+
+  facet_grid(~continent)
+```
+
+```{r}
+p<- ggplot(data = gapminder, mapping = aes(x = lifeExp, y = year))
+
+p + geom_boxplot(varwidth= FALSE)+
+  facet_grid(~continent)
+```
+9. `geom_pointrange()` is one of a family of related geoms that produce different kinds of error bars and ranges, depending on your specific needs. They include `geom_linerange()`, `geom_crossbar()`, and `geom_errorbar()`. Try them out using `gapminder` or `organdata` to see how they differ.
+```{r}
+head(gapminder)
+```
+```{r}
+by_continent <-gapminder %>% group_by(continent) %>% summarize_if(is.numeric, funs(mean, sd), na.rm = TRUE) %>% 
+  ungroup()
+
+p <- ggplot(data = by_continent, 
+            mapping = aes(x = reorder(continent, lifeExp_mean), 
+                          y = lifeExp_mean))
+
+p + geom_pointrange(mapping = aes(ymin = lifeExp_mean - lifeExp_sd, 
+                                  ymax = lifeExp_mean + lifeExp_sd))  +
+labs(y= "", x= "Life Expectancy Rate in various continent") 
+```
+
+```{r}
+
+by_continent <-gapminder %>% group_by(continent) %>% summarize_if(is.numeric, funs(mean, sd), na.rm = TRUE) %>% 
+  ungroup()
+
+p <- ggplot(data = by_continent, 
+            mapping = aes(x = reorder(continent, lifeExp_mean), 
+                          y = lifeExp_mean))
+
+p + geom_linerange(mapping = aes(ymin = lifeExp_mean - lifeExp_sd, 
+                                  ymax = lifeExp_mean + lifeExp_sd))  +
+labs(y= "", x= "Life Expectancy Rate in various continent") 
+```
+
+```{r}
+
+by_continent <-gapminder %>% group_by(continent) %>% summarize_if(is.numeric, funs(mean, sd), na.rm = TRUE) %>% 
+  ungroup()
+
+p <- ggplot(data = by_continent, 
+            mapping = aes(x = reorder(continent, lifeExp_mean), 
+                          y = lifeExp_mean))
+
+p + geom_crossbar(mapping = aes(ymin = lifeExp_mean - lifeExp_sd, 
+                                  ymax = lifeExp_mean + lifeExp_sd))  +
+labs(y= "", x= "Life Expectancy Rate in various continent") 
+```
+```{r}
+by_continent <-gapminder %>% group_by(continent) %>% summarize_if(is.numeric, funs(mean, sd), na.rm = TRUE) %>% 
+  ungroup()
+
+p <- ggplot(data = by_continent, 
+            mapping = aes(x = reorder(continent, lifeExp_mean), 
+                          y = lifeExp_mean))
+
+p + geom_errorbar(mapping = aes(ymin = lifeExp_mean - lifeExp_sd, 
+                                  ymax = lifeExp_mean + lifeExp_sd))  +
+labs(y= "", x= "Life Expectancy Rate in various continent") 
+
+```
+
+
+
+---
+
+The following is not a question, just links to two resources: `dplyr` has a large number of helper functions that let you summarize data in many different ways. The [vignette on window functions](https://cran.r-project.org/web/packages/dplyr/vignettes/window-functions.html) included with the dplyr documentation is a good place to begin learning about these. You should also look at [Chapter 3 of Wickham & Grolemund (2016)](https://r4ds.had.co.nz/transform.html) for more information on transforming data with dplyr.

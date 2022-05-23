@@ -1,0 +1,356 @@
+---
+title: 'Group/Homework #5'
+author: '[Priyal]'
+date: "4/30/2022"
+output: html_document
+---
+
+## Setting Up a Project
+
+Having files and documents organized well (and maintaining that organization) is an important aspect of data analysis projects. Refer back to Chapter 1 and the Appendix of *Data Visualization*. Obtain all the data files that your client shares with you. Create a project folder and subfolders within it. Include the `here()` library in the preamble and use it to help import/export. **This is not the file that you will submit as your project. This is behind-the-scenes analysis file, which you can later build on/refine to generate your final products.*    
+
+## Preface/Preamble
+
+For the purposes of this homework, consider this to be the beginning of your Rmarkdown file. You should always have an initial R code chunk that sets up your work environment by loading all the packages you would need for the rest of the document. Fill in the code chunk below.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(rpart)
+library(lubridate)
+library(tidyverse)
+library(ggrepel)
+```
+
+## Project Summary
+
+Describe/summarize your project here:
+
+1. Who is your client? What is her/his organization and role?
+Zimmi is my client and he is one of the board of directors at Netflix
+ 
+2. What is/are the question(s) s/he would like you to explore and answer?
+He would like to know the distribution of content in terms of movies and TV shows on Netflix. The trends in the number of content released over the years. The distribution of the duration. Number of tv shows and movies released in each country. The distribution of the rating across country.
+
+3. What is the source of the data, the quality of the data, and the appropriateness of the data available to you for analysis?
+
+The data is taken from kaggle, the data had missing values that had to be replaced by NA. A little bit of data cleaning needed to be done but apart from that the data set looks good for analysis  
+
+4. What is your plan of action? (What are the key data manipulation steps? What are some key anticipated challenges? How will you address these challenges?)
+
+My plan of action is to clean the data set first and then work on the questions that my director has one by one. Then try to tweak, manipulate and clean the data as per the need of the questions. The challenges I might face could be with parting the date, time and duration and then grouping by 
+
+5. What is your time line? (What aspect of the project will you complete by when? When might you need to check in with your client prior to presenting?)
+I should be able to complete it by 3rd May and that's when me and my client can check in before presenting.
+
+## Import the Data Files
+
+Write R code chunks to import all the data files as necessary.
+
+```{r}
+data<-read.csv("/Users/poojanshah/Downloads/netflix_titles 2.csv")
+head(data)
+```
+max(table(data$duration))
+
+## Data Cleaning/Arranging
+As needed, clean up any messy variable names, pare down to only the columns/observations you need. Some of you might need to `join` across multiple data files. Do that here as well.
+
+```{r}
+data$date_added <- as.POSIXct(data$date_added, format = "%b%d,%Y")
+data$date_added <- format(data$date_added, format = "%Y")
+data$date_added<-as.numeric(data$date_added)
+data$director[data$director==""] <- NA
+data$cast[data$cast==""] <- NA
+data$country[data$country==""] <- NA
+data$rating[data$rating==""] <- NA
+data$date_added[data$date_added==""]<-NA
+head(data,100)
+unique(data$date_added)
+
+```
+
+## Descriptive Statistics and Visualizations
+
+Write R code chunks to produce some descriptive statistics and visualizations. This is exploratory data analysis. Generate whatever visualizations that would help you understand the patterns of the data, at the level of each individual variables and across.
+
+```{r}
+data %>% count(type) %>% ggplot(aes(x = type, y = n, color = type, lable=n))+ geom_point()+geom_text(aes(label=ifelse(n,as.character(n),'')),hjust=-1,vjust=0)
+```
+```{r}
+
+
+
+```
+
+
+
+```{r}
+a<- data %>%group_by(rating) %>% summarize(total = n()) %>% mutate(percentage= round((total/sum(total))*100,digits=3)) 
+head(a)
+ggplot(a, aes(x=rating,y= percentage))+
+geom_bar(stat='identity')+coord_flip()
+```
+
+```{r}
+data %>% 
+  separate_rows(country,sep=", ") %>% 
+  group_by(type) %>% 
+  mutate(country=fct_infreq(country)) %>% 
+  ggplot(aes(y=country,fill=type))+
+  geom_bar()+
+  coord_cartesian(ylim=c(1,10)) +
+  facet_wrap(~type)
+```
+```{r}
+data %>% separate_rows(country,sep=", ") %>% group_by(country, type) %>% 
+summarise(count = n()) %>%  filter(country=='India'| country=='United States') %>%ggplot(aes(x = country, y = count, colour = type, group=type))+ geom_line(size=1.1)+facet_wrap(~type) 
+```
+```{r}
+data %>% 
+  filter(release_year >= 2014) %>% 
+  group_by(release_year,type) %>% 
+  count() %>% 
+  ggplot(aes(x=release_year,y=n,fill=type)) + 
+  geom_line(aes(color=type))+geom_point()+geom_text(aes(y=n,label=n),
+            position=position_stack(vjust=0.5))
+
+```
+
+```{r}
+library(ggrepel)
+library(dplyr)
+library(ggplot2) 
+#install.packages("gganimate")
+library(gganimate)
+library(hrbrthemes)
+#install.packages("hrbrthemes")
+b<-data %>% filter(release_year >= 2010) %>% group_by(release_year,type) %>% count() 
+
+plot4<-ggplot(data=b, aes(x=release_year,y=n,fill=type, group=type)) + geom_line( aes(color=type)) + geom_point()+geom_text_repel(data = subset(b,release_year == 2013 & type=='Movie'|release_year == 2017 & type=='Movie'|release_year == 2013 & type=='TV Show'|release_year == 2020 & type=='TV Show'), mapping = aes(label = n))+labs(
+    x='Year',
+    y='Count',
+    title='A trend of movies and TV shows relesed on Netflix over the year'
+  ) + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+plot4
+
+b
+
+ggsave('fig2.png',plot=plot4, width = 20, height = 10, units = "cm")
+```
+
+```{r}
+c<- data%>%group_by(date_added,type)%>%summarise(n=n())%>% mutate(pct_change = (n/lag(n) - 1) * 100)
+ggplot(data=c, mapping= aes(date_added, fill=type, alpha = 0.4, bins = 20,stat_count(width = 0.5)))+
+c<- data%>%
+ group_by(type,date_added)  %>% filter(date_added==2008|date_added==2015|date_added==2021) %>% 
+   summarise(n=n())%>% mutate(pct_change = (n/lag(n) - 1) * 100) 
+c[is.na(c)]<- 0 
+c$pct_change<- round(c$pct_change) geom_bar()+
+  theme_bw()
+
+
+plot<-ggplot(data=c, aes(x= date_added, y=pct_change, fill=type))+
+  geom_line(aes(color=type))+geom_point()+geom_text_repel(data = subset(c,date_added == 2021|date_added == 2015),mapping = aes(label = pct_change))+ labs(
+    x='Date Added',
+    y='Percentage Change',
+    title='Percentage change in movies and tv shows from 2008 to 2021')+
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+plot
+ggsave('fig5.png',plot=plot, width = 20, height = 10, units = "cm")
+
+plot9<- ggplot(c, aes(x=date_added, fill=type)) + 
+    geom_density(aes(fill=type))+ labs(
+    title='Trend of movie and tv show added on Netflix')+
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))%>% filter(date_added==2008|date_added==2015|date_added==2021)
+c
+ggsave('fig4.png',plot=plot9, width = 20, height = 10, units = "cm")
+
+c%>%
+  group_by(date_added, type)%>%
+  summarise(n=n())%>% 
+  ggplot(aes(date_added, color=type, na.rm= TRUE))+
+  geom_density(aes(fill=type))+
+  theme_bw()
+
+```
+```{r}
+c<- data%>%
+  group_by(type,date_added)%>%summarise(n=n())%>% filter(date_added==2008|date_added==2015|date_added==2021) %>% mutate(pct_change =(round(n/lag(n)-1) * 100))
+c[is.na(c)]<- 0 
+
+
+plot3<- ggplot(data=c, aes(x=date_added,y=pct_change)) +geom_smooth(aes(colour= type))+ geom_point()+geom_text_repel(data = subset(c,date_added == 2015 & type=='Movie'|date_added == 2021 & type=='Movie'|date_added == 2015 & type=='TV Show'|date_added == 2021 & type=='TV Show'), mapping = aes(label =paste0(pct_change,"%")))+labs(
+    x='Year',
+    y='Percentage',
+    title='A trend of Movies and TV shows added on Netfix over the year')+ theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+plot3
+```
+ggsave('fig1.png',plot=plot3, width = 20, height = 10, units = "cm")
+
+```{r}
+l <- data
+l$country <-(l$country= trimws(l$country))
+l
+l %>% separate_rows(country, sep=',') %>%  group_by(rating,country) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) 
+sep<- l %>% separate_rows(country, sep=',')
+sep$sepc<-trimws(sep$country, which = c("left"))
+p<-sep%>%group_by(rating,sepc) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>%  na.omit(l) %>% slice(1:10) %>% mutate(n_pct=n/sum(n)*100) %>% 
+p$n_pct<-round(p$n_pct)
+
+sep_list<- l %>% separate_rows(listed_in, sep=',')
+sep_list$listed_in <- trimws(sep_list$listed_in, which = c("left"))
+genre<- sep_list %>% group_by(type,listed_in) %>% summarise(n=n()) %>% arrange(desc(n)) %>% 
+```
+
+
+```{r}
+install.packages("leaflet")
+library(leaflet)
+```
+```{r}
+m
+m <- leaflet() %>% 
+   addTiles() %>% 
+   setView( lng = 2.34, lat = 48.85, zoom = 3 ) %>% 
+   addProviderTiles("Esri.WorldImagery") %>% addCircleMarkers( lng =c (38.46574173874511, 104.5068831398628, 94.60355538613831, 90.08865027095015), lat =c( 35.12865382292903,34.848369827954954,62.601922846309435,24.163921516435373), radius = 5,weight = 3, opacity = 1.0, fill = TRUE,
+fillOpacity = 0.5, label= c("2nd Seria-1","4th China-34","3rd Russia-8","1st Bangladesh-1"),labelOptions = labelOptions(noHide = TRUE,direction = "bottom",
+      style = list(
+        "color" = "red",
+        "font-family" = "serif",
+        "font-style" = "italic",
+        "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+        "font-size" = "12px",
+        "border-color" = "rgba(0,0,0,0.5)"
+      ))) %>% addMarkers(lat= c( 39.945282191838395, 23.198092426739077,55.208502418402254,39.41234010048877,46.601380108313926,57.80287282196349), lng= c(-102.47129489908515,79.55989498652657,-2.268088705383046,-3.215593830777516,2.397597594397099,-101.83596066841396), label  = c("1st Unitesd States-1101","2nd India-266","3rd U.K-253","4th Spain-170","5th France 163","6th Canada 107"),labelOptions = labelOptions(noHide = TRUE, direction = "bottom",
+      style = list(
+        "color" = "red",
+        "font-family" = "serif",
+        "font-style" = "italic",
+        "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+        "font-size" = "12px",
+        "border-color" = "rgba(0,0,0,0.5)"
+      )))
+
+
+
+```{r}
+library(maps)
+```
+```{r}
+data %>%
+ filter(type == 'Movie') %>%
+ mutate(duration_in_mins = parse_number(duration)) %>%
+ ggplot() + geom_density(aes(x = duration_in_mins))
+```
+```{r}
+data %>%
+ filter(type == 'TV Show') %>%
+ mutate(duration_in_mins = parse_number(duration)) %>%
+ ggplot() + geom_density(aes(x = duration_in_mins))
+```
+```{r}rd
+tv_dura <-data %>% 
+  filter(type=='TV Show') %>% 
+  group_by(duration) %>% 
+  count(sort=TRUE)
+tv_d <- tv_dura$duration
+tv_d <- factor(tv_d,levels = tv_d)
+tv_dura %>% 
+  mutate(duration=factor(duration,levels = tv_d)) %>% 
+  plot_ly(x=~duration,
+          y=~n,
+          type='bar',
+          text=~n,
+          textposition='outside')
+```
+```{r}rd
+library(plotly)
+data %>% 
+  filter(type=='Movie') %>% 
+  separate_rows(listed_in,sep = ', ') %>% 
+  mutate(listed_in=fct_infreq(listed_in)) %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  plot_ly(y=~listed_in,
+          x=~n,
+          type='bar',
+          orientation='h')
+          
+          
+```
+```{r}
+l %>% separate_rows(country, sep=',') %>%  group_by(rating,country) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) 
+sep<- l %>% separate_rows(country, sep=',')
+sep$country<-trimws(sep$country, which = c("left"))
+b<-sep%>%group_by(rating,country) %>% summarise(n=n()) %>% 
+arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) %>% slice(1:10)  
+a<-ggplot() + 
+  geom_col(aes(b$country,b$n), fill = b$n) +
+  coord_polar() + 
+  ggtitle("Top 10 countries with the highest TV-MA content") +
+  labs(x="Country", y="Count of TV-MA content") +
+  theme_minimal()
+
+ggsave('fig18.png',plot=a, width = 20, height = 10, units = "cm")
+```
+
+```{r}
+a<- sep$sepc<-trimws(sep$country, which = c("left"))
+sep%>%group_by(rating,sepc,type) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) %>% slice(1:10)
+
+ggplot(data=a)+ geom_area(data=subset(a,type=='Movie'), mapping=aes(x = , y = SMI),
+            fill = 4, alpha = 0.85)
+```
+```{r}
+l %>% separate_rows(country, sep=',') %>%  group_by(rating,country) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>% na.omit(l) 
+sep<- l %>% separate_rows(country, sep=',')
+sep$sepc<-trimws(sep$country, which = c("left"))
+p<-sep%>%group_by(rating,sepc) %>% summarise(n=n()) %>% arrange(desc(n))%>% filter(rating=='TV-MA') %>%  na.omit(l) %>% slice(1:10) %>% mutate(n_pct=n/sum(n)*100) %>% 
+p$n_pct<-round(p$n_pct)
+plt <- ggplot(p) +
+  # Make custom panel grid
+  geom_hline(
+    aes(yintercept = y), 
+    data.frame(y = c(0:3) * 000.1),
+    color = "lightgrey"
+  ) +   geom_col(
+    aes(
+      x = p$sepc,
+      y = p$n_pct,
+      fill = p$n_pct
+    ),
+    position = "dodge2",
+    show.legend = TRUE,
+    alpha = .5
+  )+geom_point(
+    aes(
+      x = p$sepc,
+      y = p$n_pct
+    ),
+    size = 1,
+    color = "gray12"
+  ) +  coord_polar()+theme_bw() + theme(panel.border = element_blank(), 
+ axis.line = element_line(colour = "black"))
+
+
+plt
+
+```
+```{r}
+data %>%
+ filter(type == 'TV Show') %>%
+ mutate(duration_in_mins = parse_number(duration)) %>%
+ ggplot() + geom_density(aes(x = duration_in_mins)) +
+ labs(title = 'Distribution of Movie Duration',
+     subtitle = 'in Minutes',
+     caption = 'Data Source: Kaggle ') +
+theme_minimal()
+```
